@@ -2,6 +2,10 @@ name := "btce-chat"
 
 scalaVersion := "2.10.3"
 
+organization := "com.alexknvl"
+
+version := "0.1-SNAPSHOT"
+
 resolvers += "spray" at "http://repo.spray.io/"
 
 libraryDependencies ++= Seq(
