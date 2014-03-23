@@ -81,7 +81,7 @@ class TradeApi(private val key: String, private val secret: String) {
   private def toPostData(args: Map[String, Any]) =
     args map { case (a, b) => a + "=" + b.toString} mkString "&"
 
-  def request(method: String, args: Map[String, String] = Map()): Either[Error, spray.json.JsObject] = {
+  private def rawRequest(method: String, args: Map[String, String] = Map()): String = {
     import org.apache.http.client.fluent.Request
     import org.apache.http.entity.ContentType
     import org.apache.http.message.BasicHeader
@@ -95,19 +95,30 @@ class TradeApi(private val key: String, private val secret: String) {
       request.bodyString(data, ContentType.APPLICATION_FORM_URLENCODED)
 
       val response = request.execute()
-      val json = JsonParser(response.returnContent().asString())
+      response.returnContent().asString()
+    } catch {
+      case NonFatal(ex) => throw ApiException(ex.getMessage, ex)
+    }
+  }
 
-      json match {
-        case Error(InvalidNonce(current: Long, sent: Long)) =>
-          auth.nonce = current + 1
-          this.request(method, args)
+  private def parse(text: String): Either[Error, spray.json.JsObject] = {
+    try {
+      JsonParser(text) match {
         case Error(err) => Left(err)
         case obj: JsObject => Right(obj.getFields("return")(0).asJsObject)
         case _ => throw ApiException("Invalid response format.")
       }
     } catch {
-      case ex: ApiException => throw ex
       case NonFatal(ex) => throw ApiException(ex.getMessage, ex)
+    }
+  }
+
+  def request(method: String, args: Map[String, String] = Map()): Either[Error, spray.json.JsObject] = {
+    parse(rawRequest(method, args)) match {
+      case Left(InvalidNonce(current: Long, sent: Long)) =>
+        auth.nonce = current + 1
+        this.request(method, args)
+      case value => value
     }
   }
 
