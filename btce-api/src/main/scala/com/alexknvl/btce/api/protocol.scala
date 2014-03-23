@@ -34,8 +34,8 @@ case class Rights(info: Boolean, trade: Boolean, withdraw: Boolean)
 case class AccountInfo(funds: Funds, rights: Rights, transactionCount: Long, openOrders: Long,
                        serverTime: Long)
 case class Ticker(high: BigDecimal, low: BigDecimal, avg: BigDecimal, vol: BigDecimal, vol_cur: BigDecimal,
-                  last: BigDecimal, buy: BigDecimal, sell: BigDecimal, updated: BigInt)
-case class Trade(`type`: String, price: BigDecimal, amount: BigDecimal, tid: BigInt, timestamp: BigInt)
+                  last: BigDecimal, buy: BigDecimal, sell: BigDecimal, updated: Long)
+case class Trade(`type`: String, price: BigDecimal, amount: BigDecimal, tid: BigInt, timestamp: Long)
 case class Depth(asks: List[(BigDecimal, BigDecimal)], bids: List[(BigDecimal, BigDecimal)])
 
 case class TransactionHistoryEntry(`type`: Int, amount: BigDecimal, currency: Currency, desc: String,
