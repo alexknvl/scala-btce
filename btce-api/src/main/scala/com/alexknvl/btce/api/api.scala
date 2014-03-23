@@ -16,14 +16,14 @@ case class ApiException(
 class PublicApi {
   private final val ApiUrl = "https://btc-e.com/api/3/"
 
-  private def request(apiString: String): Either[ErrorParser, JsObject] = {
+  private def request(apiString: String): Either[Error, JsObject] = {
     try {
       val uri = ApiUrl + apiString
       val response = Request.Get(uri).execute()
       val json = JsonParser(response.returnContent().asString()).asJsObject
 
       json match {
-        case ErrorParser(error: ErrorParser) => Left(error)
+        case ErrorParser(error: Error) => Left(error)
         case _ => Right(json)
       }
     } catch {
@@ -33,7 +33,7 @@ class PublicApi {
   }
   private def request[T: JsonReader](method: String,
                  pairs: Traversable[Pair],
-                 ignoreInvalid: Boolean = false): Either[ErrorParser, Map[Pair, T]] = {
+                 ignoreInvalid: Boolean = false): Either[Error, Map[Pair, T]] = {
     try {
       val apiString = method + "/" + pairs.mkString("-") +
         (if (ignoreInvalid) "?ignore_invalid=1" else "")
@@ -45,18 +45,21 @@ class PublicApi {
     }
   }
 
-  def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[ErrorParser, Map[Pair, Ticker]] =
+  def fee(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, BigDecimal]] =
+    request[BigDecimal]("fee", pairs, ignoreInvalid)
+
+  def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
     request[Ticker]("ticker", pairs, ignoreInvalid)
-  def trades(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[ErrorParser, Map[Pair, List[Trade]]] =
+  def trades(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, List[Trade]]] =
     request[List[Trade]]("trades", pairs, ignoreInvalid)
-  def depth(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[ErrorParser, Map[Pair, Depth]] =
+  def depth(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Depth]] =
     request[Depth]("depth", pairs, ignoreInvalid)
 
-  def ticker(pair: Pair): Either[ErrorParser, Ticker] =
+  def ticker(pair: Pair): Either[Error, Ticker] =
     ticker(Traversable(pair), false).right.map { _(pair) }
-  def trades(pair: Pair): Either[ErrorParser, List[Trade]] =
+  def trades(pair: Pair): Either[Error, List[Trade]] =
     trades(Traversable(pair), false).right.map { _(pair) }
-  def depth(pair: Pair): Either[ErrorParser, Depth] =
+  def depth(pair: Pair): Either[Error, Depth] =
     depth(Traversable(pair), false).right.map { _(pair) }
 }
 
@@ -84,7 +87,7 @@ class TradeApi(private val key: String, private val secret: String) {
     }
   }
 
-  private def parse(text: String): Either[ErrorParser, JsObject] = {
+  private def parse(text: String): Either[Error, JsObject] = {
     try {
       JsonParser(text) match {
         case ErrorParser(err) => Left(err)
@@ -96,7 +99,7 @@ class TradeApi(private val key: String, private val secret: String) {
     }
   }
 
-  private def request(method: String, args: Map[String, String] = Map()): Either[ErrorParser, JsObject] = {
+  private def request(method: String, args: Map[String, String] = Map()): Either[Error, JsObject] = {
     parse(rawRequest(method, args)) match {
       case Left(InvalidNonce(current: Long, sent: Long)) =>
         auth.nonce = current + 1
@@ -105,16 +108,16 @@ class TradeApi(private val key: String, private val secret: String) {
     }
   }
 
-  def accountInfo: Either[ErrorParser, AccountInfo] =
+  def accountInfo: Either[Error, AccountInfo] =
     request("getInfo").right.map { _.convertTo[AccountInfo] }
 
-  def transactionHistory: Either[ErrorParser, Map[BigInt, TransactionHistoryEntry]] =
+  def transactionHistory: Either[Error, Map[BigInt, TransactionHistoryEntry]] =
     transactionHistory(None, None, None, None, None, None, None)
 
   def transactionHistory(from: Option[Long] = None, count: Option[Long] = None,
                          fromId: Option[Long] = None, endId: Option[Long] = None,
                          order: Option[String] = None, since: Option[Long] = None,
-                         end: Option[Long] = None): Either[ErrorParser, Map[BigInt, TransactionHistoryEntry]] = {
+                         end: Option[Long] = None): Either[Error, Map[BigInt, TransactionHistoryEntry]] = {
     val arguments: Map[String, String] = Map(
       "from" -> from, "count" -> count, "from_id" -> fromId, "end_id" -> endId, "order" -> order,
       "since" -> since, "end" -> end)
@@ -124,13 +127,13 @@ class TradeApi(private val key: String, private val secret: String) {
     request("TransHistory", arguments).right.map { _.convertTo[Map[BigInt, TransactionHistoryEntry]] }
   }
 
-  def tradeHistory: Either[ErrorParser, Map[BigInt, TradeHistoryEntry]] =
+  def tradeHistory: Either[Error, Map[BigInt, TradeHistoryEntry]] =
     tradeHistory(None, None, None, None, None, None, None)
 
   def tradeHistory(from: Option[Long] = None, count: Option[Long] = None,
                    fromId: Option[Long] = None, endId: Option[Long] = None,
                    order: Option[String] = None, since: Option[Long] = None,
-                   end: Option[Long] = None): Either[ErrorParser, Map[BigInt, TradeHistoryEntry]] = {
+                   end: Option[Long] = None): Either[Error, Map[BigInt, TradeHistoryEntry]] = {
     val arguments: Map[String, String] = Map(
       "from" -> from, "count" -> count, "from_id" -> fromId, "end_id" -> endId, "order" -> order,
       "since" -> since, "end" -> end)
@@ -140,9 +143,9 @@ class TradeApi(private val key: String, private val secret: String) {
     request("TradeHistory", arguments).right.map { _.convertTo[Map[BigInt, TradeHistoryEntry]] }
   }
 
-  def activeOrders: Either[ErrorParser, Map[BigInt, OrderListEntry]] = activeOrders(None)
+  def activeOrders: Either[Error, Map[BigInt, OrderListEntry]] = activeOrders(None)
 
-  def activeOrders(pair: Option[Pair] = None): Either[ErrorParser, Map[BigInt, OrderListEntry]] = {
+  def activeOrders(pair: Option[Pair] = None): Either[Error, Map[BigInt, OrderListEntry]] = {
     val arguments: Map[String, String] = Map("pair" -> pair)
       .filter { case (k, v) => !v.isEmpty }
       .map { case(k, v) => (k, v.get.toString()) }

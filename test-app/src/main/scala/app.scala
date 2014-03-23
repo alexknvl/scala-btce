@@ -18,5 +18,6 @@ object App {
     val siteApi = new SiteApi()
     siteApi.scrape("en")
     siteApi.scrape("ru")
+    siteApi.scrape("cn")
   }
 }
