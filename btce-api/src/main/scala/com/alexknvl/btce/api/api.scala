@@ -115,9 +115,7 @@ class TradeApi(private val key: String, private val secret: String) {
   def accountInfo: Either[Error, AccountInfo] =
     request("getInfo").right.map { _.convertTo[AccountInfo] }
 
-  def transactionHistory: Either[Error, Map[BigInt, TransactionHistoryEntry]] =
-    transactionHistory(None, None, None, None, None, None, None)
-
+  def transactionHistory: Either[Error, Map[BigInt, TransactionHistoryEntry]] = transactionHistory()
   def transactionHistory(from: Option[Long] = None, count: Option[Long] = None,
                          fromId: Option[Long] = None, endId: Option[Long] = None,
                          order: Option[String] = None, since: Option[Long] = None,
@@ -131,9 +129,7 @@ class TradeApi(private val key: String, private val secret: String) {
     request("TransHistory", arguments).right.map { _.convertTo[Map[BigInt, TransactionHistoryEntry]] }
   }
 
-  def tradeHistory: Either[Error, Map[BigInt, TradeHistoryEntry]] =
-    tradeHistory(None, None, None, None, None, None, None)
-
+  def tradeHistory: Either[Error, Map[BigInt, TradeHistoryEntry]] = tradeHistory()
   def tradeHistory(from: Option[Long] = None, count: Option[Long] = None,
                    fromId: Option[Long] = None, endId: Option[Long] = None,
                    order: Option[String] = None, since: Option[Long] = None,
@@ -147,8 +143,7 @@ class TradeApi(private val key: String, private val secret: String) {
     request("TradeHistory", arguments).right.map { _.convertTo[Map[BigInt, TradeHistoryEntry]] }
   }
 
-  def activeOrders: Either[Error, Map[BigInt, OrderListEntry]] = activeOrders(None)
-
+  def activeOrders: Either[Error, Map[BigInt, OrderListEntry]] = activeOrders()
   def activeOrders(pair: Option[Pair] = None): Either[Error, Map[BigInt, OrderListEntry]] = {
     val arguments: Map[String, String] = Map("pair" -> pair)
       .filter { case (k, v) => !v.isEmpty }
