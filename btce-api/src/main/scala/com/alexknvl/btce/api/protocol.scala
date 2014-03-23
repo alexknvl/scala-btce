@@ -203,7 +203,7 @@ private[btce] trait PrivateApiFormats extends CommonApiFormats {
         JsNumber(rate), JsNumber(isMine), JsNumber(timestamp)) =>
           TradeHistoryEntry(orderId.toBigInt(), Pair(pair), tpe, amount, rate, isMine != BigDecimal(0),
             timestamp.toLong)
-        case _ => throw new DeserializationException("Expected Order object.")
+        case _ => throw new DeserializationException("Expected TradeHistoryEntry object.")
       }
   }
   implicit val OrderListEntryFormat = jsonFormat(OrderListEntry,
