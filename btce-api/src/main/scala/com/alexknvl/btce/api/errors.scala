@@ -27,7 +27,7 @@ case class Unknown(message: String) extends Error {
 }
 
 object Error {
-  import spray.json._
+  import spray.json.{JsValue, JsObject, JsNumber, JsString}
 
   private val InvalidNoncePattern = "invalid nonce parameter; on key:(\\d+), you sent:(\\d+)".r
   private val InvalidPairNamePattern = "Invalid pair name: (\\w+)".r
