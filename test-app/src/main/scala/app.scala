@@ -5,6 +5,9 @@ object App {
   def main(args: Array[String]) {
     val publicApi = new PublicApi()
 
+    publicApi.info()
+    publicApi.fee(Pair("btc_usd"))
+
     publicApi.ticker(Pair("xxx_xxx"))
 
     publicApi.ticker(Pair("btc_usd"))

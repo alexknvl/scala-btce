@@ -45,9 +45,11 @@ class PublicApi {
     }
   }
 
+  def info(): Either[Error, Info] =
+    request("info").right.map { _.convertTo[Info] }
+
   def fee(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, BigDecimal]] =
     request[BigDecimal]("fee", pairs, ignoreInvalid)
-
   def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
     request[Ticker]("ticker", pairs, ignoreInvalid)
   def trades(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, List[Trade]]] =
@@ -55,6 +57,8 @@ class PublicApi {
   def depth(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Depth]] =
     request[Depth]("depth", pairs, ignoreInvalid)
 
+  def fee(pair: Pair): Either[Error, BigDecimal] =
+    fee(Traversable(pair), false).right.map { _(pair) }
   def ticker(pair: Pair): Either[Error, Ticker] =
     ticker(Traversable(pair), false).right.map { _(pair) }
   def trades(pair: Pair): Either[Error, List[Trade]] =
