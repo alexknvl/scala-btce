@@ -1,11 +1,12 @@
 package com.alexknvl.btce.site
 
+import org.jsoup.Jsoup
+import org.jsoup.Connection
+import org.jsoup.nodes.Document
+
 case class ParseException(message: String = null, cause: Throwable = null) extends RuntimeException(message, cause)
 
-class Auth {
-  import org.jsoup.Connection
-  import org.jsoup.nodes.Document
-
+private class Auth {
   private final val BodyCookieScriptPattern =
     "document.cookie=\"a=([a-f0-9]{32});path=/;\";location.href=document.URL;".r
 
@@ -27,19 +28,27 @@ class Auth {
   def setCookies(connection: Connection) = bodyCookie.foreach { connection.cookie("a", _) }
 }
 
-case class ChatMessage(id: Long, time: String, user: String, message: String)
-case class ScrapingResult(messages: List[ChatMessage], userCount: Long, botCount: Long,
-                          isDevOnline: Boolean, isSupportOnline: Boolean, isAdminOnline: Boolean)
+case class ChatMessage(
+  id: Long,
+  time: String,
+  user: String,
+  message: String)
+
+case class ScrapingResult(
+  messages: List[ChatMessage],
+  userCount: Long,
+  botCount: Long,
+  isDevOnline: Boolean,
+  isSupportOnline: Boolean,
+  isAdminOnline: Boolean)
 
 class SiteApi {
-  import org.jsoup._
-  import org.jsoup.nodes.Document
-
   private final val SiteUrl = "https://btc-e.com/"
   private final val UsersEnPattern = "Users: (\\d+) Bots: (\\d+)".r
   private final val UsersRuPattern = "Пользователи: (\\d+) Боты: (\\d+)".r
   private val auth = new Auth
 
+  private def mainPage(locale: String = "en"): Document = mainPage(locale, 0)
   private def mainPage(locale: String, tries: Int): Document = {
     val connection = Jsoup.connect(SiteUrl)
     auth.setCookies(connection)
@@ -53,10 +62,7 @@ class SiteApi {
     } else doc
   }
 
-  def mainPage(locale: String = "en"): Document = mainPage(locale, 0)
-  def mainPage: Document = mainPage("en", 0)
-
-  def scrape(doc: Document = mainPage): ScrapingResult = {
+  private def scrape(doc: Document): ScrapingResult = {
     import scala.collection.JavaConversions._
 
     val (userCount, botCount) = doc.select("div#users-online").first().ownText() match {
@@ -78,16 +84,18 @@ class SiteApi {
       }
     }
 
-    val messages = for (elem <- doc.select("div#nChat p.chatmessage").listIterator();
-         id = elem.id().substring(3).toLong;
-         a = elem.select("a").get(0);
-         time = a.attr("title");
-         user = a.text();
-         message = elem.select("span").get(0).text())
-      yield ChatMessage(id, time, user, message)
+    val messages = for (
+      elem <- doc.select("div#nChat p.chatmessage").listIterator();
+      id = elem.id().substring(3).toLong;
+      a = elem.select("a").get(0);
+      time = a.attr("title");
+      user = a.text();
+      message = elem.select("span").get(0).text()
+    ) yield ChatMessage(id, time, user, message)
 
     ScrapingResult(messages.toList, userCount, botCount, isDevOnline, isSupportOnline, isAdminOnline)
   }
-  def scrape(locale: String): ScrapingResult = scrape(mainPage(locale))
-  def scrape: ScrapingResult = scrape(mainPage)
+
+  def scrape(locale: String = "en"): ScrapingResult = scrape(mainPage(locale))
+  def scrape: ScrapingResult = scrape()
 }
