@@ -30,41 +30,41 @@ class PublicApi {
     }
   }
 
-  def request(method: String, pairs: List[Pair], ignoreInvalid: Boolean = false): Either[Error, JsObject] =
+  def request(method: String, pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, JsObject] =
     request(s"$method/${pairs.mkString("-")}${if (ignoreInvalid) "?ignore_invalid=1" else ""}")
 
   def ticker(pair: Pair) =
-    request("ticker", List(pair)).right.map {
+    request("ticker", Traversable(pair)).right.map {
       _.getFields(pair.toString()) match {
         case Seq(value@JsObject(_)) => value.convertTo[Ticker]
         case _ => throw ApiException("Could not parse ticker response.")
       }
     }
-  def ticker(pairs: List[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
+  def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
     request("ticker", pairs, ignoreInvalid).right.map {
       _.fields map { case (k, v) => (Pair(k), v.convertTo[Ticker]) }
     }
 
   def trades(pair: Pair): Either[Error, Trade] =
-    request("trades", List(pair)).right.map {
+    request("trades", Traversable(pair)).right.map {
         _.getFields(pair.toString()) match {
         case Seq(value@JsArray(_)) => value.convertTo[Trade]
         case value => throw ApiException("Could not parse trades response.")
       }
     }
-  def trades(pairs: List[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Trade]] =
+  def trades(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Trade]] =
     request("trades", pairs, ignoreInvalid).right.map {
       _.fields map { case (k, v) => (Pair(k), v.convertTo[Trade]) }
     }
 
   def depth(pair: Pair): Either[Error, Depth] =
-    request("depth", List(pair)).right.map {
+    request("depth", Traversable(pair)).right.map {
         _.getFields(pair.toString()) match {
         case Seq(value@JsObject(_)) => value.convertTo[Depth]
         case value => throw ApiException("Could not parse trades response.")
       }
     }
-  def depth(pairs: List[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Depth]] =
+  def depth(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Depth]] =
     request("depth", pairs, ignoreInvalid).right.map {
       _.fields map { case (k, v) => (Pair(k), v.convertTo[Depth]) }
     }
