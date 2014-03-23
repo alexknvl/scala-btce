@@ -26,6 +26,19 @@ object Pair {
   }
 }
 
+case class Funds(
+  usd: BigDecimal,
+  btc: BigDecimal,
+  ltc: BigDecimal,
+  nmc: BigDecimal,
+  rur: BigDecimal,
+  eur: BigDecimal,
+  nvc: BigDecimal,
+  trc: BigDecimal,
+  ppc: BigDecimal,
+  ftc: BigDecimal,
+  xpm: BigDecimal)
+
 private[btce] trait CommonApiFormats extends DefaultJsonProtocol {
   implicit object CurrencyFormat extends RootJsonFormat[Currency] {
     def write(currency: Currency) = JsString(currency.name)
@@ -58,18 +71,6 @@ case class PairInfo(
   minAmount: BigDecimal,
   hidden: Boolean,
   fee: BigDecimal)
-case class Funds(
-  usd: BigDecimal,
-  btc: BigDecimal,
-  ltc: BigDecimal,
-  nmc: BigDecimal,
-  rur: BigDecimal,
-  eur: BigDecimal,
-  nvc: BigDecimal,
-  trc: BigDecimal,
-  ppc: BigDecimal,
-  ftc: BigDecimal,
-  xpm: BigDecimal)
 case class Rights(
   info: Boolean,
   trade: Boolean,
@@ -175,7 +176,7 @@ case class CancelOrderResponse(
   orderId: Long,
   funds: Funds)
 
-private[btce] trait PrivateApiFormats extends CommonApiFormats {
+private[btce] trait TradeApiFormats extends CommonApiFormats {
   implicit val TransactionHistoryEntryFormat = jsonFormat(TransactionHistoryEntry,
     "type", "amount", "currency", "desc", "status", "timestamp")
 
@@ -214,4 +215,4 @@ private[btce] trait PrivateApiFormats extends CommonApiFormats {
     "order_id", "funds")
 }
 
-private[btce] object ApiFormats extends PublicApiFormats with PrivateApiFormats
+private[btce] object ApiFormats extends PublicApiFormats with TradeApiFormats
