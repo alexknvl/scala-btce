@@ -29,35 +29,28 @@ class PublicApi {
       case NonFatal(ex) => throw ApiException(ex.getMessage, ex)
     }
   }
-  def request(method: String, pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, JsObject] =
-    request(s"$method/${pairs.mkString("-")}${if (ignoreInvalid) "?ignore_invalid=1" else ""}")
+  def request[T: JsonReader](method: String,
+                 pairs: Traversable[Pair],
+                 ignoreInvalid: Boolean = false): Either[Error, Map[Pair, T]] = {
+    val apiString = method + "/" + pairs.mkString("-") +
+      (if (ignoreInvalid) "?ignore_invalid=1" else "")
+    val response = request(apiString)
+    response.right.map { _.fields.map { case (k, v) => (Pair(k), v.convertTo[T]) } }
+  }
+
+  def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
+    request[Ticker]("ticker", pairs, ignoreInvalid)
+  def trades(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, List[Trade]]] =
+    request[List[Trade]]("trades", pairs, ignoreInvalid)
+  def depth(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Depth]] =
+    request[Depth]("depth", pairs, ignoreInvalid)
 
   def ticker(pair: Pair): Either[Error, Ticker] =
-    request("ticker", Traversable(pair), false).right.map {
-      _.fields(pair.toString).convertTo[Ticker]
-    }
-  def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
-    request("ticker", pairs, ignoreInvalid).right.map {
-      _.fields map { case (k, v) => (Pair(k), v.convertTo[Ticker]) }
-    }
-
+    ticker(Traversable(pair), false).right.map { _(pair) }
   def trades(pair: Pair): Either[Error, List[Trade]] =
-    request("trades", Traversable(pair), false).right.map {
-      _.fields(pair.toString).convertTo[List[Trade]]
-    }
-  def trades(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, List[Trade]]] =
-    request("trades", pairs, ignoreInvalid).right.map {
-      _.fields map { case (k, v) => (Pair(k), v.convertTo[List[Trade]]) }
-    }
-
+    trades(Traversable(pair), false).right.map { _(pair) }
   def depth(pair: Pair): Either[Error, Depth] =
-    request("depth", Traversable(pair), false).right.map {
-      _.fields(pair.toString).convertTo[Depth]
-    }
-  def depth(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Depth]] =
-    request("depth", pairs, ignoreInvalid).right.map {
-      _.fields map { case (k, v) => (Pair(k), v.convertTo[Depth]) }
-    }
+    depth(Traversable(pair), false).right.map { _(pair) }
 }
 
 class TradeApi(private val key: String, private val secret: String) {
