@@ -4,9 +4,9 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Hex
 
-class Auth(val key: String, val secret: String) {
-  val secretKey = new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA512")
-  val mac = Mac.getInstance("HmacSHA512")
+class Auth(val key: String, private val secret: String) {
+  private val secretKey = new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA512")
+  private val mac = Mac.getInstance("HmacSHA512")
   mac.init(secretKey)
 
   var nonce = 0: Long

@@ -1,5 +1,7 @@
 package com.alexknvl.btce.api
 
+import spray.json._
+
 case class Currency(name: String) {
   override def toString = name
 }
@@ -24,32 +26,7 @@ object Pair {
   }
 }
 
-case class PairInfo(decimalPlaces: Int, minPrice: BigDecimal, maxPrice: BigDecimal,
-                    minAmount: BigDecimal, hidden: Boolean, fee: BigDecimal)
-case class Info(serverTime: Long, pairs: Map[String, PairInfo])
-case class Funds(usd: BigDecimal, btc: BigDecimal, ltc: BigDecimal, nmc: BigDecimal, rur: BigDecimal,
-                 eur: BigDecimal, nvc: BigDecimal, trc: BigDecimal, ppc: BigDecimal, ftc: BigDecimal,
-                 xpm: BigDecimal)
-case class Rights(info: Boolean, trade: Boolean, withdraw: Boolean)
-case class AccountInfo(funds: Funds, rights: Rights, transactionCount: Long, openOrders: Long,
-                       serverTime: Long)
-case class Ticker(high: BigDecimal, low: BigDecimal, avg: BigDecimal, vol: BigDecimal, vol_cur: BigDecimal,
-                  last: BigDecimal, buy: BigDecimal, sell: BigDecimal, updated: Long)
-case class Trade(tpe: String, price: BigDecimal, amount: BigDecimal, tid: BigInt, timestamp: Long)
-case class Depth(asks: List[(BigDecimal, BigDecimal)], bids: List[(BigDecimal, BigDecimal)])
-
-case class TransactionHistoryEntry(tpe: Int, amount: BigDecimal, currency: Currency, desc: String,
-                                   status: Int, timestamp: Long)
-case class TradeHistoryEntry(orderId: BigInt, pair: Pair, tpe: String, amount: BigDecimal,
-                             rate: BigDecimal, isMine: Boolean, timestamp: Long)
-case class OrderListEntry(pair: Pair, tpe: String, amount: BigDecimal, rate: BigDecimal,
-                          createdTimestamp: Long, status: Int)
-case class TradeResponse(received: BigDecimal, remains: BigDecimal, orderId: Long, funds: Funds)
-case class CancelOrderResponse(orderId: Long, funds: Funds)
-
-private[btce] object Protocol extends spray.json.DefaultJsonProtocol with spray.json.ProductFormats {
-  import spray.json._
-
+private[btce] trait CommonApiFormats extends DefaultJsonProtocol {
   implicit object CurrencyFormat extends RootJsonFormat[Currency] {
     def write(currency: Currency) = JsString(currency.name)
 
@@ -68,7 +45,62 @@ private[btce] object Protocol extends spray.json.DefaultJsonProtocol with spray.
         case _ => throw new DeserializationException("Expected pair of currencies.")
       }
   }
+  implicit val FundsFormat = jsonFormat11(Funds)
+}
 
+case class Info(
+  serverTime: Long,
+  pairs: Map[Pair, PairInfo])
+case class PairInfo(
+  decimalPlaces: Int,
+  minPrice: BigDecimal,
+  maxPrice: BigDecimal,
+  minAmount: BigDecimal,
+  hidden: Boolean,
+  fee: BigDecimal)
+case class Funds(
+  usd: BigDecimal,
+  btc: BigDecimal,
+  ltc: BigDecimal,
+  nmc: BigDecimal,
+  rur: BigDecimal,
+  eur: BigDecimal,
+  nvc: BigDecimal,
+  trc: BigDecimal,
+  ppc: BigDecimal,
+  ftc: BigDecimal,
+  xpm: BigDecimal)
+case class Rights(
+  info: Boolean,
+  trade: Boolean,
+  withdraw: Boolean)
+case class AccountInfo(
+  funds: Funds,
+  rights: Rights,
+  transactionCount: Long,
+  openOrders: Long,
+  serverTime: Long)
+case class Ticker(
+  high: BigDecimal,
+  low: BigDecimal,
+  avg: BigDecimal,
+  vol: BigDecimal,
+  vol_cur: BigDecimal,
+  last: BigDecimal,
+  buy: BigDecimal,
+  sell: BigDecimal,
+  updated: Long)
+case class Trade(
+  tpe: String,
+  price: BigDecimal,
+  amount: BigDecimal,
+  tid: BigInt,
+  timestamp: Long)
+case class Depth(
+  asks: List[(BigDecimal, BigDecimal)],
+  bids: List[(BigDecimal, BigDecimal)])
+
+private[btce] trait PublicApiFormats extends CommonApiFormats {
   implicit object PairInfoFormat extends RootJsonFormat[PairInfo] {
     def write(pairInfo: PairInfo) = JsObject(
       "decimal_places" -> JsNumber(pairInfo.decimalPlaces),
@@ -88,7 +120,8 @@ private[btce] object Protocol extends spray.json.DefaultJsonProtocol with spray.
         case _ => throw new DeserializationException("Expected pair of currencies.")
       }
   }
-  implicit val InfoFormat = jsonFormat(Info, "server_time", "pairs")
+  implicit val InfoFormat = jsonFormat(Info,
+    "server_time", "pairs")
 
   implicit object RightsFormat extends RootJsonFormat[Rights] {
     def write(rights: Rights) = JsObject(
@@ -102,18 +135,50 @@ private[btce] object Protocol extends spray.json.DefaultJsonProtocol with spray.
         case _ => throw new DeserializationException("Expected Rights object.")
       }
   }
-  implicit val FundsFormat = jsonFormat11(Funds)
-  implicit val AccountInfoFormat = jsonFormat(AccountInfo, "funds", "rights", "transaction_count",
-    "open_orders", "server_time")
 
+  implicit val AccountInfoFormat = jsonFormat(AccountInfo,
+    "funds", "rights", "transaction_count", "open_orders", "server_time")
   implicit val TickerFormat = jsonFormat9(Ticker)
-  implicit val TradeFormat = jsonFormat(Trade, "type", "price", "amount", "tid", "timestamp")
+  implicit val TradeFormat = jsonFormat(Trade,
+    "type", "price", "amount", "tid", "timestamp")
   implicit val DepthFormat = jsonFormat2(Depth)
+}
 
-  implicit val TransactionHistoryEntryFormat = jsonFormat(
-    TransactionHistoryEntry,
-    "type", "amount", "currency", "desc",
-    "status", "timestamp")
+case class TransactionHistoryEntry(
+  tpe: Int,
+  amount: BigDecimal,
+  currency: Currency,
+  desc: String,
+  status: Int,
+  timestamp: Long)
+case class TradeHistoryEntry(
+  orderId: BigInt,
+  pair: Pair,
+  tpe: String,
+  amount: BigDecimal,
+  rate: BigDecimal,
+  isMine: Boolean,
+  timestamp: Long)
+case class OrderListEntry(
+  pair: Pair,
+  tpe: String,
+  amount: BigDecimal,
+  rate: BigDecimal,
+  createdTimestamp: Long,
+  status: Int)
+case class TradeResponse(
+  received: BigDecimal,
+  remains: BigDecimal,
+  orderId: Long,
+  funds: Funds)
+case class CancelOrderResponse(
+  orderId: Long,
+  funds: Funds)
+
+private[btce] trait PrivateApiFormats extends CommonApiFormats {
+  implicit val TransactionHistoryEntryFormat = jsonFormat(TransactionHistoryEntry,
+    "type", "amount", "currency", "desc", "status", "timestamp")
+
   implicit object TradeHistoryEntryFormat extends RootJsonFormat[TradeHistoryEntry] {
     def write(order: TradeHistoryEntry) = JsObject(
       "order_id" -> JsNumber(order.orderId),
@@ -141,16 +206,12 @@ private[btce] object Protocol extends spray.json.DefaultJsonProtocol with spray.
         case _ => throw new DeserializationException("Expected Order object.")
       }
   }
-  implicit val OrderListEntryFormat = jsonFormat(OrderListEntry, "pair", "type", "amount", "rate",
-    "timestamp_created", "status")
-  implicit val TradeResponseFormat = jsonFormat(TradeResponse, "received", "remains", "order_id", "funds")
-  implicit val CancelOrderResponseFormat = jsonFormat(CancelOrderResponse, "order_id", "funds")
-
-  implicit def IdListFormat[T: JsonFormat] = new RootJsonFormat[Map[BigInt, T]] {
-    def write(list: Map[BigInt, T]) = JsObject(list map { case (k, v) => (k.toString(), v.toJson) })
-    def read(value: JsValue): Map[BigInt, T] = value match {
-      case JsObject(fields) => fields map { case (k, v) => (BigInt(k), v.convertTo[T]) }
-      case _ => throw new DeserializationException("Expected order list.")
-    }
-  }
+  implicit val OrderListEntryFormat = jsonFormat(OrderListEntry,
+    "pair", "type", "amount", "rate", "timestamp_created", "status")
+  implicit val TradeResponseFormat = jsonFormat(TradeResponse,
+    "received", "remains", "order_id", "funds")
+  implicit val CancelOrderResponseFormat = jsonFormat(CancelOrderResponse,
+    "order_id", "funds")
 }
+
+private[btce] object ApiFormats extends PublicApiFormats with PrivateApiFormats

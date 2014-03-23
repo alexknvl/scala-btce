@@ -2,19 +2,21 @@ package com.alexknvl.btce.api
 
 import scala.util.control.NonFatal
 
+import org.apache.http.client.fluent.Request
+import org.apache.http.entity.ContentType
+import org.apache.http.message.BasicHeader
+import spray.json._
+import ApiFormats._
+
 case class ApiException(
-  message: String = null,
+  message: String,
   cause: Throwable = null
 ) extends RuntimeException(message, cause)
 
 class PublicApi {
   private final val ApiUrl = "https://btc-e.com/api/3/"
-  import spray.json._
-  import Protocol._
 
-  def request(apiString: String): Either[Error, JsObject] = {
-    import org.apache.http.client.fluent.Request
-
+  private def request(apiString: String): Either[Error, JsObject] = {
     try {
       val uri = ApiUrl + apiString
       val response = Request.Get(uri).execute()
@@ -29,13 +31,18 @@ class PublicApi {
       case NonFatal(ex) => throw ApiException(ex.getMessage, ex)
     }
   }
-  def request[T: JsonReader](method: String,
+  private def request[T: JsonReader](method: String,
                  pairs: Traversable[Pair],
                  ignoreInvalid: Boolean = false): Either[Error, Map[Pair, T]] = {
-    val apiString = method + "/" + pairs.mkString("-") +
-      (if (ignoreInvalid) "?ignore_invalid=1" else "")
-    val response = request(apiString)
-    response.right.map { _.fields.map { case (k, v) => (Pair(k), v.convertTo[T]) } }
+    try {
+      val apiString = method + "/" + pairs.mkString("-") +
+        (if (ignoreInvalid) "?ignore_invalid=1" else "")
+      val response = request(apiString)
+      response.right.map { _.fields.map { case (k, v) => (Pair(k), v.convertTo[T]) } }
+    } catch {
+      case ex: ApiException => throw ex
+      case NonFatal(ex) => throw ApiException(ex.getMessage, ex)
+    }
   }
 
   def ticker(pairs: Traversable[Pair], ignoreInvalid: Boolean = false): Either[Error, Map[Pair, Ticker]] =
@@ -54,21 +61,14 @@ class PublicApi {
 }
 
 class TradeApi(private val key: String, private val secret: String) {
-  import spray.json._
-  import Protocol._
-
   private final val ApiUrl = "https://btc-e.com/tapi/"
 
-  val auth = new Auth(key, secret)
+  private val auth = new Auth(key, secret)
 
   private def toPostData(args: Map[String, Any]) =
     args map { case (a, b) => a + "=" + b.toString} mkString "&"
 
   private def rawRequest(method: String, args: Map[String, String] = Map()): String = {
-    import org.apache.http.client.fluent.Request
-    import org.apache.http.entity.ContentType
-    import org.apache.http.message.BasicHeader
-
     try {
       val data = toPostData(args + ("method" -> method, "nonce" -> auth.newNonce))
 
@@ -84,7 +84,7 @@ class TradeApi(private val key: String, private val secret: String) {
     }
   }
 
-  private def parse(text: String): Either[Error, spray.json.JsObject] = {
+  private def parse(text: String): Either[Error, JsObject] = {
     try {
       JsonParser(text) match {
         case Error(err) => Left(err)
@@ -96,7 +96,7 @@ class TradeApi(private val key: String, private val secret: String) {
     }
   }
 
-  def request(method: String, args: Map[String, String] = Map()): Either[Error, spray.json.JsObject] = {
+  private def request(method: String, args: Map[String, String] = Map()): Either[Error, JsObject] = {
     parse(rawRequest(method, args)) match {
       case Left(InvalidNonce(current: Long, sent: Long)) =>
         auth.nonce = current + 1
