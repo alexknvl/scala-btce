@@ -171,10 +171,10 @@ class TradeApi(private val key: String, private val secret: String) {
     }
   }
 
-  def trade(pair: Pair, `type`: String, rate: BigDecimal, amount: BigDecimal) = {
+  def trade(pair: Pair, tpe: String, rate: BigDecimal, amount: BigDecimal) = {
     val arguments: Map[String, String] = Map(
       "pair" -> pair.toString,
-      "type" -> `type`.toString,
+      "type" -> tpe.toString,
       "rate" -> rate.toString,
       "amount" -> amount.toString
     )

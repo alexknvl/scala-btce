@@ -35,14 +35,14 @@ case class AccountInfo(funds: Funds, rights: Rights, transactionCount: Long, ope
                        serverTime: Long)
 case class Ticker(high: BigDecimal, low: BigDecimal, avg: BigDecimal, vol: BigDecimal, vol_cur: BigDecimal,
                   last: BigDecimal, buy: BigDecimal, sell: BigDecimal, updated: Long)
-case class Trade(`type`: String, price: BigDecimal, amount: BigDecimal, tid: BigInt, timestamp: Long)
+case class Trade(tpe: String, price: BigDecimal, amount: BigDecimal, tid: BigInt, timestamp: Long)
 case class Depth(asks: List[(BigDecimal, BigDecimal)], bids: List[(BigDecimal, BigDecimal)])
 
-case class TransactionHistoryEntry(`type`: Int, amount: BigDecimal, currency: Currency, desc: String,
+case class TransactionHistoryEntry(tpe: Int, amount: BigDecimal, currency: Currency, desc: String,
                                    status: Int, timestamp: Long)
-case class TradeHistoryEntry(orderId: BigInt, pair: Pair, `type`: String, amount: BigDecimal,
+case class TradeHistoryEntry(orderId: BigInt, pair: Pair, tpe: String, amount: BigDecimal,
                              rate: BigDecimal, isMine: Boolean, timestamp: Long)
-case class OrderListEntry(pair: Pair, `type`: String, amount: BigDecimal, rate: BigDecimal,
+case class OrderListEntry(pair: Pair, tpe: String, amount: BigDecimal, rate: BigDecimal,
                           createdTimestamp: Long, status: Int)
 case class TradeResponse(received: BigDecimal, remains: BigDecimal, orderId: Long, funds: Funds)
 case class CancelOrderResponse(orderId: Long, funds: Funds)
@@ -107,15 +107,18 @@ private[btce] object Protocol extends spray.json.DefaultJsonProtocol with spray.
     "open_orders", "server_time")
 
   implicit val TickerFormat = jsonFormat9(Ticker)
-  implicit val TradeFormat = jsonFormat5(Trade)
+  implicit val TradeFormat = jsonFormat(Trade, "type", "price", "amount", "tid", "timestamp")
   implicit val DepthFormat = jsonFormat2(Depth)
 
-  implicit val TransactionHistoryEntryFormat = jsonFormat6(TransactionHistoryEntry)
+  implicit val TransactionHistoryEntryFormat = jsonFormat(
+    TransactionHistoryEntry,
+    "type", "amount", "currency", "desc",
+    "status", "timestamp")
   implicit object TradeHistoryEntryFormat extends RootJsonFormat[TradeHistoryEntry] {
     def write(order: TradeHistoryEntry) = JsObject(
       "order_id" -> JsNumber(order.orderId),
       "pair" -> order.pair.toJson,
-      "type" -> JsString(order.`type`),
+      "type" -> JsString(order.tpe),
       "amount" -> JsNumber(order.amount),
       "rate" -> JsNumber(order.rate),
       "is_your_order" -> JsNumber(if (order.isMine) 1 else 0),
